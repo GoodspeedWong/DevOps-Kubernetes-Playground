@@ -1,0 +1,88 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xsharedsecuritygroups.platform.aws.goodnotes.io
+  labels:
+    platform.aws.goodnotes.io/composition-role: owner
+    platform.aws.goodnotes.io/type: shared-security-group
+spec:
+  compositeTypeRef:
+    apiVersion: platform.aws.goodnotes.io/v1alpha1
+    kind: XSharedSecurityGroup
+  resources:
+    - name: security-group
+      base:
+        apiVersion: ec2.aws.m.upbound.io/v1beta1
+        kind: SecurityGroup
+        metadata:
+          namespace: crossplane-system
+          labels:
+            platform.aws.goodnotes.io/managed-by: crossplane
+        spec:
+          deletionPolicy: Delete
+          providerConfigRef:
+            name: default
+          forProvider:
+            description: owner-managed shared security boundary
+            revokeRulesOnDelete: true
+            region: us-west-2
+            tags:
+              managed-by: crossplane
+            vpcIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.name
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/security-boundary"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.region
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.boundaryClass
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/boundary-class"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.boundaryClass
+          toFieldPath: spec.forProvider.tags["boundary-class"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.networkRef.name
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.networkRef.name
+          toFieldPath: spec.forProvider.tags["network-ref"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.networkRef.name
+          toFieldPath: spec.forProvider.vpcIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.description
+          toFieldPath: spec.forProvider.description
+          policy:
+            fromFieldPath: Optional
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.deletionPolicy
+          toFieldPath: spec.deletionPolicy
+          policy:
+            fromFieldPath: Optional
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.providerConfigRef.name
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Optional
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.arn
+          toFieldPath: status.arn
+          policy:
+            fromFieldPath: Optional
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.id
+          toFieldPath: status.securityGroupId
+          policy:
+            fromFieldPath: Optional
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.vpcId
+          toFieldPath: status.vpcId
+          policy:
+            fromFieldPath: Optional

@@ -1,0 +1,16 @@
+apiVersion: platform.aws.goodnotes.io/v1alpha1
+kind: XSharedSecurityGroup
+metadata:
+  # This becomes the XR name and is also patched into the AWS Security Group name.
+  name: shared-services
+spec:
+  parameters:
+    # Pick the intent-level class for this shared boundary.
+    boundaryClass: internal-services
+    # Free-form description shown on the AWS Security Group.
+    description: Shared security boundary for platform-managed internal services.
+    networkRef:
+      # Must match the platform label on the owner-managed VPC resource.
+      name: shared-dev-network
+    # AWS region where the Security Group should exist.
+    region: ap-southeast-1

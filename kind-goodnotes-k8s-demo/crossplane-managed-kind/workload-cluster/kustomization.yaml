@@ -1,0 +1,4 @@
+resources:
+  - provider-config.yaml
+  - demo-namespace.yaml
+  - demo-configmap.yaml

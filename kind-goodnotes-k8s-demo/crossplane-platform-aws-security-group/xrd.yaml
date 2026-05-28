@@ -1,0 +1,73 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xsharedsecuritygroups.platform.aws.goodnotes.io
+spec:
+  group: platform.aws.goodnotes.io
+  names:
+    kind: XSharedSecurityGroup
+    plural: xsharedsecuritygroups
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                parameters:
+                  type: object
+                  required:
+                    - boundaryClass
+                    - networkRef
+                    - region
+                  properties:
+                    boundaryClass:
+                      type: string
+                      description: Intent-level classification for this shared security boundary.
+                      enum:
+                        - control-plane
+                        - data-plane
+                        - internal-services
+                    description:
+                      type: string
+                      description: Optional AWS security group description.
+                      maxLength: 255
+                    deletionPolicy:
+                      type: string
+                      description: Crossplane deletion policy for the managed AWS resource.
+                      enum:
+                        - Delete
+                        - Orphan
+                    networkRef:
+                      type: object
+                      description: Reference to the owner-managed network boundary, not a raw VPC ID.
+                      required:
+                        - name
+                      properties:
+                        name:
+                          type: string
+                    providerConfigRef:
+                      type: object
+                      description: Optional Crossplane AWS provider config override.
+                      properties:
+                        name:
+                          type: string
+                    region:
+                      type: string
+                      description: AWS region for the shared security group.
+              required:
+                - parameters
+            status:
+              type: object
+              properties:
+                arn:
+                  type: string
+                securityGroupId:
+                  type: string
+                vpcId:
+                  type: string

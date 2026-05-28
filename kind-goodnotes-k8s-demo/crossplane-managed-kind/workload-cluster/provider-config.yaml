@@ -1,0 +1,11 @@
+apiVersion: kubernetes.crossplane.io/v1alpha1
+kind: ProviderConfig
+metadata:
+  name: crossplane-workload
+spec:
+  credentials:
+    source: Secret
+    secretRef:
+      namespace: crossplane-system
+      name: crossplane-workload-kubeconfig
+      key: kubeconfig

@@ -1,0 +1,138 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xnetworks.platform.aws.goodnotes.io
+spec:
+  group: platform.aws.goodnotes.io
+  names:
+    kind: XNetwork
+    plural: xnetworks
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                parameters:
+                  type: object
+                  required:
+                    - cidrBlock
+                    - networkClass
+                    - privateSubnets
+                    - publicSubnets
+                    - region
+                  properties:
+                    cidrBlock:
+                      type: string
+                      description: Primary IPv4 CIDR block for the owner-managed VPC.
+                    deletionPolicy:
+                      type: string
+                      description: Crossplane deletion policy for the managed AWS resources.
+                      enum:
+                        - Delete
+                        - Orphan
+                    networkClass:
+                      type: string
+                      description: Intent-level classification for this network boundary.
+                      enum:
+                        - shared
+                        - application
+                        - data
+                    privateSubnets:
+                      type: object
+                      description: Owner-defined private subnet topology.
+                      required:
+                        - a
+                        - b
+                      properties:
+                        a:
+                          type: object
+                          required:
+                            - availabilityZone
+                            - cidrBlock
+                          properties:
+                            availabilityZone:
+                              type: string
+                            cidrBlock:
+                              type: string
+                        b:
+                          type: object
+                          required:
+                            - availabilityZone
+                            - cidrBlock
+                          properties:
+                            availabilityZone:
+                              type: string
+                            cidrBlock:
+                              type: string
+                    providerConfigRef:
+                      type: object
+                      description: Optional Crossplane AWS provider config override.
+                      properties:
+                        name:
+                          type: string
+                    publicSubnets:
+                      type: object
+                      description: Owner-defined public subnet topology.
+                      required:
+                        - a
+                        - b
+                      properties:
+                        a:
+                          type: object
+                          required:
+                            - availabilityZone
+                            - cidrBlock
+                          properties:
+                            availabilityZone:
+                              type: string
+                            cidrBlock:
+                              type: string
+                        b:
+                          type: object
+                          required:
+                            - availabilityZone
+                            - cidrBlock
+                          properties:
+                            availabilityZone:
+                              type: string
+                            cidrBlock:
+                              type: string
+                    region:
+                      type: string
+                      description: AWS region for the owner-managed VPC topology.
+              required:
+                - parameters
+            status:
+              type: object
+              properties:
+                internetGatewayId:
+                  type: string
+                privateRouteTableId:
+                  type: string
+                privateSubnetIds:
+                  type: object
+                  properties:
+                    a:
+                      type: string
+                    b:
+                      type: string
+                publicRouteTableId:
+                  type: string
+                publicSubnetIds:
+                  type: object
+                  properties:
+                    a:
+                      type: string
+                    b:
+                      type: string
+                vpcArn:
+                  type: string
+                vpcId:
+                  type: string

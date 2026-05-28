@@ -1,0 +1,20 @@
+apiVersion: kubernetes.crossplane.io/v1alpha2
+kind: Object
+metadata:
+  name: crossplane-workload-platform-demo-config
+spec:
+  providerConfigRef:
+    name: crossplane-workload
+  forProvider:
+    manifest:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: platform-demo-settings
+        namespace: platform-demo
+        labels:
+          managed-by: crossplane
+      data:
+        owner: crossplane
+        targetCluster: crossplane-workload
+        targetContext: kind-crossplane-workload

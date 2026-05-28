@@ -1,0 +1,786 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xnetworks.platform.aws.goodnotes.io
+  labels:
+    platform.aws.goodnotes.io/composition-role: owner
+    platform.aws.goodnotes.io/type: network
+spec:
+  compositeTypeRef:
+    apiVersion: platform.aws.goodnotes.io/v1alpha1
+    kind: XNetwork
+  resources:
+    - name: vpc
+      base:
+        apiVersion: ec2.aws.m.upbound.io/v1beta1
+        kind: VPC
+        metadata:
+          namespace: crossplane-system
+          labels:
+            platform.aws.goodnotes.io/managed-by: crossplane
+            platform.aws.goodnotes.io/resource-role: vpc
+        spec:
+          deletionPolicy: Delete
+          providerConfigRef:
+            name: default
+          forProvider:
+            assignGeneratedIpv6CidrBlock: false
+            cidrBlock: 10.0.0.0/16
+            enableDnsHostnames: true
+            enableDnsSupport: true
+            region: us-west-2
+            tags:
+              Name: replace-me
+              managed-by: crossplane
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.tags["Name"]
+          transforms:
+            - type: string
+              string:
+                type: Format
+                fmt: "%s-vpc"
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.networkClass
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network-class"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.networkClass
+          toFieldPath: spec.forProvider.tags["network-class"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.region
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.cidrBlock
+          toFieldPath: spec.forProvider.cidrBlock
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.deletionPolicy
+          toFieldPath: spec.deletionPolicy
+          policy:
+            fromFieldPath: Optional
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.providerConfigRef.name
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Optional
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.arn
+          toFieldPath: status.vpcArn
+          policy:
+            fromFieldPath: Optional
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.id
+          toFieldPath: status.vpcId
+          policy:
+            fromFieldPath: Optional
+    - name: internet-gateway
+      base:
+        apiVersion: ec2.aws.m.upbound.io/v1beta1
+        kind: InternetGateway
+        metadata:
+          namespace: crossplane-system
+          labels:
+            platform.aws.goodnotes.io/managed-by: crossplane
+            platform.aws.goodnotes.io/resource-role: internet-gateway
+        spec:
+          deletionPolicy: Delete
+          providerConfigRef:
+            name: default
+          forProvider:
+            region: us-west-2
+            tags:
+              Name: replace-me
+              managed-by: crossplane
+            vpcIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+                platform.aws.goodnotes.io/resource-role: vpc
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.tags["Name"]
+          transforms:
+            - type: string
+              string:
+                type: Format
+                fmt: "%s-igw"
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.region
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.vpcIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.deletionPolicy
+          toFieldPath: spec.deletionPolicy
+          policy:
+            fromFieldPath: Optional
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.providerConfigRef.name
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Optional
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.id
+          toFieldPath: status.internetGatewayId
+          policy:
+            fromFieldPath: Optional
+    - name: public-route-table
+      base:
+        apiVersion: ec2.aws.m.upbound.io/v1beta1
+        kind: RouteTable
+        metadata:
+          namespace: crossplane-system
+          labels:
+            platform.aws.goodnotes.io/managed-by: crossplane
+            platform.aws.goodnotes.io/resource-role: route-table
+            platform.aws.goodnotes.io/route-table-scope: public
+        spec:
+          deletionPolicy: Delete
+          providerConfigRef:
+            name: default
+          forProvider:
+            region: us-west-2
+            tags:
+              Name: replace-me
+              managed-by: crossplane
+            vpcIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+                platform.aws.goodnotes.io/resource-role: vpc
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.tags["Name"]
+          transforms:
+            - type: string
+              string:
+                type: Format
+                fmt: "%s-public-rt"
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.region
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.vpcIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.deletionPolicy
+          toFieldPath: spec.deletionPolicy
+          policy:
+            fromFieldPath: Optional
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.providerConfigRef.name
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Optional
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.id
+          toFieldPath: status.publicRouteTableId
+          policy:
+            fromFieldPath: Optional
+    - name: private-route-table
+      base:
+        apiVersion: ec2.aws.m.upbound.io/v1beta1
+        kind: RouteTable
+        metadata:
+          namespace: crossplane-system
+          labels:
+            platform.aws.goodnotes.io/managed-by: crossplane
+            platform.aws.goodnotes.io/resource-role: route-table
+            platform.aws.goodnotes.io/route-table-scope: private
+        spec:
+          deletionPolicy: Delete
+          providerConfigRef:
+            name: default
+          forProvider:
+            region: us-west-2
+            tags:
+              Name: replace-me
+              managed-by: crossplane
+            vpcIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+                platform.aws.goodnotes.io/resource-role: vpc
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.tags["Name"]
+          transforms:
+            - type: string
+              string:
+                type: Format
+                fmt: "%s-private-rt"
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.region
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.vpcIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.deletionPolicy
+          toFieldPath: spec.deletionPolicy
+          policy:
+            fromFieldPath: Optional
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.providerConfigRef.name
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Optional
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.id
+          toFieldPath: status.privateRouteTableId
+          policy:
+            fromFieldPath: Optional
+    - name: public-default-route
+      base:
+        apiVersion: ec2.aws.m.upbound.io/v1beta1
+        kind: Route
+        metadata:
+          namespace: crossplane-system
+          labels:
+            platform.aws.goodnotes.io/managed-by: crossplane
+            platform.aws.goodnotes.io/resource-role: route
+            platform.aws.goodnotes.io/route-scope: public-egress
+        spec:
+          deletionPolicy: Delete
+          providerConfigRef:
+            name: default
+          forProvider:
+            destinationCidrBlock: 0.0.0.0/0
+            gatewayIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+                platform.aws.goodnotes.io/resource-role: internet-gateway
+            region: us-west-2
+            routeTableIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+                platform.aws.goodnotes.io/resource-role: route-table
+                platform.aws.goodnotes.io/route-table-scope: public
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.region
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.gatewayIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.routeTableIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.deletionPolicy
+          toFieldPath: spec.deletionPolicy
+          policy:
+            fromFieldPath: Optional
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.providerConfigRef.name
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Optional
+    - name: public-subnet-a
+      base:
+        apiVersion: ec2.aws.m.upbound.io/v1beta1
+        kind: Subnet
+        metadata:
+          namespace: crossplane-system
+          labels:
+            platform.aws.goodnotes.io/managed-by: crossplane
+            platform.aws.goodnotes.io/resource-role: subnet
+            platform.aws.goodnotes.io/subnet-slot: a
+            platform.aws.goodnotes.io/subnet-visibility: public
+        spec:
+          deletionPolicy: Delete
+          providerConfigRef:
+            name: default
+          forProvider:
+            availabilityZone: us-west-2a
+            cidrBlock: 10.0.0.0/24
+            mapPublicIpOnLaunch: true
+            region: us-west-2
+            tags:
+              Name: replace-me
+              managed-by: crossplane
+            vpcIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+                platform.aws.goodnotes.io/resource-role: vpc
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.networkClass
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network-class"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.region
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.publicSubnets.a.availabilityZone
+          toFieldPath: spec.forProvider.availabilityZone
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.publicSubnets.a.cidrBlock
+          toFieldPath: spec.forProvider.cidrBlock
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.vpcIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.tags["Name"]
+          transforms:
+            - type: string
+              string:
+                type: Format
+                fmt: "%s-public-a"
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.networkClass
+          toFieldPath: spec.forProvider.tags["network-class"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.deletionPolicy
+          toFieldPath: spec.deletionPolicy
+          policy:
+            fromFieldPath: Optional
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.providerConfigRef.name
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Optional
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.id
+          toFieldPath: status.publicSubnetIds.a
+          policy:
+            fromFieldPath: Optional
+    - name: public-subnet-b
+      base:
+        apiVersion: ec2.aws.m.upbound.io/v1beta1
+        kind: Subnet
+        metadata:
+          namespace: crossplane-system
+          labels:
+            platform.aws.goodnotes.io/managed-by: crossplane
+            platform.aws.goodnotes.io/resource-role: subnet
+            platform.aws.goodnotes.io/subnet-slot: b
+            platform.aws.goodnotes.io/subnet-visibility: public
+        spec:
+          deletionPolicy: Delete
+          providerConfigRef:
+            name: default
+          forProvider:
+            availabilityZone: us-west-2b
+            cidrBlock: 10.0.1.0/24
+            mapPublicIpOnLaunch: true
+            region: us-west-2
+            tags:
+              Name: replace-me
+              managed-by: crossplane
+            vpcIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+                platform.aws.goodnotes.io/resource-role: vpc
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.networkClass
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network-class"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.region
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.publicSubnets.b.availabilityZone
+          toFieldPath: spec.forProvider.availabilityZone
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.publicSubnets.b.cidrBlock
+          toFieldPath: spec.forProvider.cidrBlock
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.vpcIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.tags["Name"]
+          transforms:
+            - type: string
+              string:
+                type: Format
+                fmt: "%s-public-b"
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.networkClass
+          toFieldPath: spec.forProvider.tags["network-class"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.deletionPolicy
+          toFieldPath: spec.deletionPolicy
+          policy:
+            fromFieldPath: Optional
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.providerConfigRef.name
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Optional
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.id
+          toFieldPath: status.publicSubnetIds.b
+          policy:
+            fromFieldPath: Optional
+    - name: private-subnet-a
+      base:
+        apiVersion: ec2.aws.m.upbound.io/v1beta1
+        kind: Subnet
+        metadata:
+          namespace: crossplane-system
+          labels:
+            platform.aws.goodnotes.io/managed-by: crossplane
+            platform.aws.goodnotes.io/resource-role: subnet
+            platform.aws.goodnotes.io/subnet-slot: a
+            platform.aws.goodnotes.io/subnet-visibility: private
+        spec:
+          deletionPolicy: Delete
+          providerConfigRef:
+            name: default
+          forProvider:
+            availabilityZone: us-west-2a
+            cidrBlock: 10.0.10.0/24
+            mapPublicIpOnLaunch: false
+            region: us-west-2
+            tags:
+              Name: replace-me
+              managed-by: crossplane
+            vpcIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+                platform.aws.goodnotes.io/resource-role: vpc
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.networkClass
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network-class"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.region
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.privateSubnets.a.availabilityZone
+          toFieldPath: spec.forProvider.availabilityZone
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.privateSubnets.a.cidrBlock
+          toFieldPath: spec.forProvider.cidrBlock
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.vpcIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.tags["Name"]
+          transforms:
+            - type: string
+              string:
+                type: Format
+                fmt: "%s-private-a"
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.networkClass
+          toFieldPath: spec.forProvider.tags["network-class"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.deletionPolicy
+          toFieldPath: spec.deletionPolicy
+          policy:
+            fromFieldPath: Optional
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.providerConfigRef.name
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Optional
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.id
+          toFieldPath: status.privateSubnetIds.a
+          policy:
+            fromFieldPath: Optional
+    - name: private-subnet-b
+      base:
+        apiVersion: ec2.aws.m.upbound.io/v1beta1
+        kind: Subnet
+        metadata:
+          namespace: crossplane-system
+          labels:
+            platform.aws.goodnotes.io/managed-by: crossplane
+            platform.aws.goodnotes.io/resource-role: subnet
+            platform.aws.goodnotes.io/subnet-slot: b
+            platform.aws.goodnotes.io/subnet-visibility: private
+        spec:
+          deletionPolicy: Delete
+          providerConfigRef:
+            name: default
+          forProvider:
+            availabilityZone: us-west-2b
+            cidrBlock: 10.0.11.0/24
+            mapPublicIpOnLaunch: false
+            region: us-west-2
+            tags:
+              Name: replace-me
+              managed-by: crossplane
+            vpcIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+                platform.aws.goodnotes.io/resource-role: vpc
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.networkClass
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network-class"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.region
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.privateSubnets.b.availabilityZone
+          toFieldPath: spec.forProvider.availabilityZone
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.privateSubnets.b.cidrBlock
+          toFieldPath: spec.forProvider.cidrBlock
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.vpcIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.tags["Name"]
+          transforms:
+            - type: string
+              string:
+                type: Format
+                fmt: "%s-private-b"
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.networkClass
+          toFieldPath: spec.forProvider.tags["network-class"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.deletionPolicy
+          toFieldPath: spec.deletionPolicy
+          policy:
+            fromFieldPath: Optional
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.providerConfigRef.name
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Optional
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.id
+          toFieldPath: status.privateSubnetIds.b
+          policy:
+            fromFieldPath: Optional
+    - name: public-subnet-a-association
+      base:
+        apiVersion: ec2.aws.m.upbound.io/v1beta1
+        kind: RouteTableAssociation
+        metadata:
+          namespace: crossplane-system
+          labels:
+            platform.aws.goodnotes.io/managed-by: crossplane
+            platform.aws.goodnotes.io/resource-role: route-table-association
+            platform.aws.goodnotes.io/subnet-slot: a
+            platform.aws.goodnotes.io/subnet-visibility: public
+        spec:
+          deletionPolicy: Delete
+          providerConfigRef:
+            name: default
+          forProvider:
+            region: us-west-2
+            routeTableIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+                platform.aws.goodnotes.io/resource-role: route-table
+                platform.aws.goodnotes.io/route-table-scope: public
+            subnetIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+                platform.aws.goodnotes.io/resource-role: subnet
+                platform.aws.goodnotes.io/subnet-slot: a
+                platform.aws.goodnotes.io/subnet-visibility: public
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.region
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.routeTableIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.subnetIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.deletionPolicy
+          toFieldPath: spec.deletionPolicy
+          policy:
+            fromFieldPath: Optional
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.providerConfigRef.name
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Optional
+    - name: public-subnet-b-association
+      base:
+        apiVersion: ec2.aws.m.upbound.io/v1beta1
+        kind: RouteTableAssociation
+        metadata:
+          namespace: crossplane-system
+          labels:
+            platform.aws.goodnotes.io/managed-by: crossplane
+            platform.aws.goodnotes.io/resource-role: route-table-association
+            platform.aws.goodnotes.io/subnet-slot: b
+            platform.aws.goodnotes.io/subnet-visibility: public
+        spec:
+          deletionPolicy: Delete
+          providerConfigRef:
+            name: default
+          forProvider:
+            region: us-west-2
+            routeTableIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+                platform.aws.goodnotes.io/resource-role: route-table
+                platform.aws.goodnotes.io/route-table-scope: public
+            subnetIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+                platform.aws.goodnotes.io/resource-role: subnet
+                platform.aws.goodnotes.io/subnet-slot: b
+                platform.aws.goodnotes.io/subnet-visibility: public
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.region
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.routeTableIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.subnetIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.deletionPolicy
+          toFieldPath: spec.deletionPolicy
+          policy:
+            fromFieldPath: Optional
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.providerConfigRef.name
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Optional
+    - name: private-subnet-a-association
+      base:
+        apiVersion: ec2.aws.m.upbound.io/v1beta1
+        kind: RouteTableAssociation
+        metadata:
+          namespace: crossplane-system
+          labels:
+            platform.aws.goodnotes.io/managed-by: crossplane
+            platform.aws.goodnotes.io/resource-role: route-table-association
+            platform.aws.goodnotes.io/subnet-slot: a
+            platform.aws.goodnotes.io/subnet-visibility: private
+        spec:
+          deletionPolicy: Delete
+          providerConfigRef:
+            name: default
+          forProvider:
+            region: us-west-2
+            routeTableIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+                platform.aws.goodnotes.io/resource-role: route-table
+                platform.aws.goodnotes.io/route-table-scope: private
+            subnetIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+                platform.aws.goodnotes.io/resource-role: subnet
+                platform.aws.goodnotes.io/subnet-slot: a
+                platform.aws.goodnotes.io/subnet-visibility: private
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.region
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.routeTableIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.subnetIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.deletionPolicy
+          toFieldPath: spec.deletionPolicy
+          policy:
+            fromFieldPath: Optional
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.providerConfigRef.name
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Optional
+    - name: private-subnet-b-association
+      base:
+        apiVersion: ec2.aws.m.upbound.io/v1beta1
+        kind: RouteTableAssociation
+        metadata:
+          namespace: crossplane-system
+          labels:
+            platform.aws.goodnotes.io/managed-by: crossplane
+            platform.aws.goodnotes.io/resource-role: route-table-association
+            platform.aws.goodnotes.io/subnet-slot: b
+            platform.aws.goodnotes.io/subnet-visibility: private
+        spec:
+          deletionPolicy: Delete
+          providerConfigRef:
+            name: default
+          forProvider:
+            region: us-west-2
+            routeTableIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+                platform.aws.goodnotes.io/resource-role: route-table
+                platform.aws.goodnotes.io/route-table-scope: private
+            subnetIdSelector:
+              matchLabels:
+                platform.aws.goodnotes.io/network: replace-me
+                platform.aws.goodnotes.io/resource-role: subnet
+                platform.aws.goodnotes.io/subnet-slot: b
+                platform.aws.goodnotes.io/subnet-visibility: private
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.labels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.region
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.routeTableIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.subnetIdSelector.matchLabels["platform.aws.goodnotes.io/network"]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.deletionPolicy
+          toFieldPath: spec.deletionPolicy
+          policy:
+            fromFieldPath: Optional
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.parameters.providerConfigRef.name
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Optional

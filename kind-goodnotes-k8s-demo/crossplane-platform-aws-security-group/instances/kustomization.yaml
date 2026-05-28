@@ -1,0 +1,8 @@
+# Add one file per shared security group instance here.
+# To create a new SG:
+# 1. Copy an existing instance YAML in this directory.
+# 2. Change metadata.name and spec.parameters values.
+# 3. Add the new filename to resources below.
+resources:
+  - shared-services.yaml
+  - payments-internal.yaml

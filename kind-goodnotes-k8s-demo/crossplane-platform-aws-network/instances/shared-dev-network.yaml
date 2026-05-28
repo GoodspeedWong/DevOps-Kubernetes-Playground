@@ -1,0 +1,50 @@
+apiVersion: platform.aws.goodnotes.io/v1alpha1
+kind: XNetwork
+metadata:
+  # This is the logical owner network name.
+  #
+  # It becomes the stable platform label used by downstream consumers:
+  #   platform.aws.goodnotes.io/network: shared-dev-network
+  #
+  # Keep this value durable. Renaming it changes the reference boundary that
+  # other consumer XRs are expected to use via networkRef.name.
+  name: shared-dev-network
+spec:
+  parameters:
+    # Owner-managed VPC CIDR.
+    #
+    # This XR owns the VPC lifecycle, so this field belongs here. A consumer XR
+    # should never be asked for a raw vpcId or route table identifier.
+    cidrBlock: 10.40.0.0/16
+    # Intent-level network category.
+    #
+    # This is a policy and governance signal, not an AWS implementation field.
+    networkClass: shared
+    privateSubnets:
+      # Private subnet "a" stays behind the private route table.
+      a:
+        # Concrete AWS AZ chosen by the platform owner.
+        availabilityZone: ap-southeast-1a
+        # Private address space reserved for workloads in AZ "a".
+        cidrBlock: 10.40.10.0/24
+      # Private subnet "b" provides the second failure domain.
+      b:
+        availabilityZone: ap-southeast-1b
+        cidrBlock: 10.40.11.0/24
+    providerConfigRef:
+      # Optional provider config override.
+      #
+      # Leave this block out if the Composition default should be used.
+      name: default
+    publicSubnets:
+      # Public subnet "a" is intended for ingress-facing or edge-attached
+      # resources that need the public route table.
+      a:
+        availabilityZone: ap-southeast-1a
+        cidrBlock: 10.40.0.0/24
+      # Public subnet "b" mirrors the topology in a second AZ.
+      b:
+        availabilityZone: ap-southeast-1b
+        cidrBlock: 10.40.1.0/24
+    # Region for the entire owner-managed topology.
+    region: ap-southeast-1

@@ -21,7 +21,7 @@ This README documents the `kubernetes-platform-engineering` repository against t
 - **Workload baselines**: `foo`, `bar`, and `iris-sklearn-api` are deployed in the `apps` namespace and currently route through Gateway API `HTTPRoute` objects.
 - **Traffic layers**: the repo contains both an NGINX Ingress controller stack and Envoy Gateway assets (`gateway/` CRDs plus `gateway-controller/` controller manifests).
 - **Observability**: Prometheus/Grafana, OTEL Collector, Loki, Mimir, and Tempo all have manifests under `kind-goodnotes-k8s-demo/`.
-- **Storage and GitOps**: MinIO operator and tenant resources are present, along with Argo CD manifests.
+- **Storage, GitOps, and control planes**: MinIO operator and tenant resources are present, along with Argo CD and Crossplane manifests.
 - **Performance engineering**: a Python ingress load generator lives in `scripts/load-test.py`, and the k6 operator manifests live in `kind-goodnotes-k8s-demo/k6/`.
 - **Profiling and diagnosis**: `go-apps/main.go` starts several intentionally hot code paths plus `pprof` on `localhost:6060`.
 
@@ -38,6 +38,8 @@ This README documents the `kubernetes-platform-engineering` repository against t
 ├── kind-goodnotes-k8s-demo/
 │   ├── apps/                    # baseline workloads
 │   ├── argocd/                  # Argo CD manifests
+│   ├── crossplane/              # Crossplane control plane install
+│   ├── crossplane-managed-kind/ # Crossplane-managed child Kind cluster example
 │   ├── coredns/                 # Supporting CoreDNS config snippets
 │   ├── crd/                     # Supporting CRDs
 │   ├── gateway/                 # Gateway API install assets (not a kustomize root)
@@ -88,6 +90,7 @@ This README documents the `kubernetes-platform-engineering` repository against t
 
    ```sh
    kubectl apply -k kind-goodnotes-k8s-demo/argocd
+   kubectl apply -k kind-goodnotes-k8s-demo/crossplane
    kubectl apply -k kind-goodnotes-k8s-demo/k6
    kubectl apply -k kind-goodnotes-k8s-demo/minio-operator
    kubectl apply -k kind-goodnotes-k8s-demo/minio
@@ -109,9 +112,10 @@ This README documents the `kubernetes-platform-engineering` repository against t
 ## Current live cluster snapshot
 
 Verified on 2026-03-30 against `kubectl config current-context = kind-goodnotes-k8s-demo`.
+Crossplane was additionally installed and verified on 2026-05-20.
 
 - **Nodes**: `goodnotes-k8s-demo-control-plane` plus `worker`, `worker2`, `worker3`, all `Ready`.
-- **Namespaces from this repo are present**: `addons`, `apps`, `argocd`, `gateway`, `ingress-nginx`, `k6`, and `monitoring`.
+- **Namespaces from this repo are present**: `addons`, `apps`, `argocd`, `crossplane-system`, `gateway`, `ingress-nginx`, `k6`, and `monitoring`.
 - **Gateway API is active**: `gateway/public-gateway` is `Programmed=True`.
 - **Application routes are Gateway API based**:
   - `apps/foo` for `foo.localhost`
@@ -122,7 +126,7 @@ Verified on 2026-03-30 against `kubectl config current-context = kind-goodnotes-
   - `monitoring/promethues` for `prometheus.localhost`
 - **Observed running stacks**:
   - baseline workloads: `foo`, `bar`, `iris-sklearn-api`
-  - platform: Argo CD, k6 operator, Envoy Gateway, MinIO operator, Prometheus/Grafana, Loki, Mimir, OTEL, Tempo
+  - platform: Argo CD, Crossplane, k6 operator, Envoy Gateway, MinIO operator, Prometheus/Grafana, Loki, Mimir, OTEL, Tempo
   - additional runtime-only workloads in `apps`: `agent-coordinator`, `execution-agent`, `market-data-adapter`, `notification-gateway`, `openclaw-discord-gateway`, `portfolio-watcher`, `trading-console`, `trading-core`, `postgres`, `postgres-exporter`, plus several CronJob-created completed Jobs
 
 The important boundary is that the live cluster has moved beyond the repository's baseline platform definition. This repo still provides the core platform and workload manifests, while the running cluster currently hosts extra OpenClaw/trading services that are only partially reflected here through Grafana dashboards and observability config.
@@ -189,6 +193,6 @@ On 2026-03-30, `kubectl` confirmed the cluster state above, but `curl -H 'Host: 
 
 ## Notes
 
-- Not every directory under `kind-goodnotes-k8s-demo/` is a standalone kustomize root. The confirmed roots are `argocd`, `ingress-controller`, `k6`, `loki`, `mimir`, `minio-operator`, `minio`, `namespaces`, `otel-collector`, and `tempo`, plus the three app directories.
+- Not every directory under `kind-goodnotes-k8s-demo/` is a standalone kustomize root. The confirmed roots are `argocd`, `crossplane`, `ingress-controller`, `k6`, `loki`, `mimir`, `minio-operator`, `minio`, `namespaces`, `otel-collector`, and `tempo`, plus the three app directories.
 - `kind-goodnotes-k8s-demo/gateway/` currently holds install assets such as `standard-install.yaml`; `kind-goodnotes-k8s-demo/gateway-controller/` is applied from the rendered `manifest.yaml`.
 - Several repo files are clearly operational scratchpads or generated artifacts. This README intentionally documents the maintained platform surfaces rather than every untracked local file in the worktree.
