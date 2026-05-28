@@ -57,6 +57,14 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
+  name: crossplane-system
+  labels:
+    namespace: crossplane-system
+    kubernetes.io/metadata.name: crossplane-system
+---
+apiVersion: v1
+kind: Namespace
+metadata:
   name: gateway
   labels:
     namespace: gateway

@@ -1,0 +1,16 @@
+apiVersion: kubernetes.crossplane.io/v1alpha2
+kind: Object
+metadata:
+  name: crossplane-workload-platform-demo-namespace
+spec:
+  providerConfigRef:
+    name: crossplane-workload
+  forProvider:
+    manifest:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: platform-demo
+        labels:
+          managed-by: crossplane
+          environment: demo

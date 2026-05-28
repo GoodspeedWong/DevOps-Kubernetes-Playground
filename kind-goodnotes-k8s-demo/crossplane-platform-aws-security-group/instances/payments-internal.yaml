@@ -1,0 +1,13 @@
+apiVersion: platform.aws.goodnotes.io/v1alpha1
+kind: XSharedSecurityGroup
+metadata:
+  # To add another SG, copy this file, rename it, and change this name first.
+  name: payments-internal
+spec:
+  parameters:
+    # Keep this API intent-focused. Do not add raw vpcId or ingress/egress rules here.
+    boundaryClass: internal-services
+    description: Shared security boundary for payments internal services.
+    networkRef:
+      name: shared-dev-network
+    region: ap-southeast-1

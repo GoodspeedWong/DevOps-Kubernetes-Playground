@@ -1,0 +1,6 @@
+resources:
+  - provider-aws-ec2.yaml
+  - provider-aws-eks.yaml
+  - provider-aws-iam.yaml
+  - provider-aws-rds.yaml
+  - provider-aws-s3.yaml

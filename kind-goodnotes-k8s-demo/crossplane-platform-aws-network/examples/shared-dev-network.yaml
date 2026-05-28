@@ -1,0 +1,65 @@
+apiVersion: platform.aws.goodnotes.io/v1alpha1
+kind: XNetwork
+metadata:
+  # This is the owner XR name.
+  #
+  # The Composition also projects this value into stable labels such as:
+  #   platform.aws.goodnotes.io/network: shared-dev-network
+  #
+  # Downstream consumer APIs should reference this logical name through
+  # networkRef.name instead of passing raw AWS VPC or subnet IDs.
+  name: shared-dev-network
+spec:
+  parameters:
+    # The top-level VPC CIDR owned by this platform network.
+    #
+    # This is owner intent, not a consumer-facing detail. The Composition
+    # patches it into the managed AWS VPC resource as spec.forProvider.cidrBlock.
+    cidrBlock: 10.40.0.0/16
+    # Intent-level classification for governance and policy.
+    #
+    # Use this to describe what kind of shared network this is. Do not create
+    # separate APIs that select AWS resources directly by tag or ID.
+    networkClass: shared
+    privateSubnets:
+      # Private subnet slot "a".
+      #
+      # This subnet is created by the owner Composition and labeled as:
+      #   subnet-visibility: private
+      #   subnet-slot: a
+      #
+      # Consumer APIs can later select or derive the right subnet through those
+      # stable labels or XR status outputs, rather than receiving subnet IDs.
+      a:
+        # The concrete AWS availability zone for this subnet.
+        availabilityZone: ap-southeast-1a
+        # The CIDR block reserved for private subnet "a".
+        cidrBlock: 10.40.10.0/24
+      # Private subnet slot "b" for multi-AZ topology.
+      b:
+        availabilityZone: ap-southeast-1b
+        cidrBlock: 10.40.11.0/24
+    providerConfigRef:
+      # Optional Crossplane provider config override.
+      #
+      # Omit this block if you want to use the Composition default provider
+      # config. Keep it only when this network must reconcile against a
+      # non-default AWS credential or account boundary.
+      name: default
+    publicSubnets:
+      # Public subnet slot "a".
+      #
+      # The Composition attaches this subnet to the public route table and
+      # enables public IP mapping on launch. This is owner-managed topology.
+      a:
+        availabilityZone: ap-southeast-1a
+        cidrBlock: 10.40.0.0/24
+      # Public subnet slot "b" for multi-AZ ingress-facing capacity.
+      b:
+        availabilityZone: ap-southeast-1b
+        cidrBlock: 10.40.1.0/24
+    # AWS region for the whole network boundary.
+    #
+    # All managed resources in this Composition, including VPC, subnets, route
+    # tables, and internet gateway, are reconciled in this region.
+    region: ap-southeast-1

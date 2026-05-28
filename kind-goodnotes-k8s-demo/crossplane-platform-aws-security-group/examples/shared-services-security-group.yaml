@@ -1,0 +1,11 @@
+apiVersion: platform.aws.goodnotes.io/v1alpha1
+kind: XSharedSecurityGroup
+metadata:
+  name: shared-services
+spec:
+  parameters:
+    boundaryClass: internal-services
+    description: Shared security boundary for platform-managed internal services.
+    networkRef:
+      name: shared-dev-network
+    region: ap-southeast-1

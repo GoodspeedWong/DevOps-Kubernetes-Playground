@@ -1,0 +1,19 @@
+apiVersion: helm.crossplane.io/v1beta1
+kind: Release
+metadata:
+  name: crossplane-workload-nginx
+spec:
+  providerConfigRef:
+    name: crossplane-workload
+  forProvider:
+    namespace: helm-demo
+    wait: true
+    waitTimeout: 5m
+    chart:
+      repository: https://charts.bitnami.com/bitnami
+      name: nginx
+      version: 22.4.2
+    values:
+      replicaCount: 0
+      service:
+        type: ClusterIP
