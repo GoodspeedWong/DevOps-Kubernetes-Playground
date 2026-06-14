@@ -1,0 +1,8 @@
+apiVersion: platform.k8s.goodnotes.io/v1alpha1
+kind: XTMBootstrap
+metadata:
+  name: tm-bootstrap
+spec:
+  parameters:
+    environment: dev
+    systemClusterRoleName: cluster-admin

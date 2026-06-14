@@ -1,0 +1,68 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xtmbootstraps.platform.k8s.goodnotes.io
+spec:
+  group: platform.k8s.goodnotes.io
+  names:
+    kind: XTMBootstrap
+    plural: xtmbootstraps
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                parameters:
+                  type: object
+                  required:
+                    - environment
+                    - systemClusterRoleName
+                  properties:
+                    deletionPolicy:
+                      type: string
+                      description: Crossplane deletion policy for the owner-managed TM bootstrap objects.
+                      enum:
+                        - Delete
+                        - Orphan
+                    environment:
+                      type: string
+                      description: Environment classification stamped onto all TM bootstrap resources.
+                    providerConfigRef:
+                      type: object
+                      description: Optional provider-kubernetes config override for the target cluster.
+                      properties:
+                        name:
+                          type: string
+                    systemClusterRoleName:
+                      type: string
+                      description: Existing ClusterRole name bound to ServiceAccount tm-system in namespace tm-system.
+              required:
+                - parameters
+            status:
+              type: object
+              properties:
+                systemClusterRoleBindingName:
+                  type: string
+                tmCoreNamespace:
+                  type: string
+                tmCoreServiceAccountName:
+                  type: string
+                tmMonitoringNamespace:
+                  type: string
+                tmMonitoringServiceAccountName:
+                  type: string
+                tmSystemNamespace:
+                  type: string
+                tmSystemServiceAccountName:
+                  type: string
+                tmWebhookNamespace:
+                  type: string
+                tmWebhookServiceAccountName:
+                  type: string

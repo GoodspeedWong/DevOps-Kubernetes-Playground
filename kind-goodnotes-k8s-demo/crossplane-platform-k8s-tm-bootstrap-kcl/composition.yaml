@@ -1,0 +1,179 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xtmbootstraps-kcl.platform.k8s.goodnotes.io
+  labels:
+    platform.k8s.goodnotes.io/composition-role: owner
+    platform.k8s.goodnotes.io/type: tm-bootstrap-kcl
+spec:
+  compositeTypeRef:
+    apiVersion: platform.k8s.goodnotes.io/v1alpha1
+    kind: XTMBootstrap
+  mode: Pipeline
+  pipeline:
+    - step: render-kcl
+      functionRef:
+        name: function-kcl
+      input:
+        apiVersion: krm.kcl.dev/v1alpha1
+        kind: KCLInput
+        spec:
+          source: |
+            oxr = option("params").oxr
+            params = oxr.spec.parameters
+
+            xr_name = oxr.metadata.name
+            environment = params.environment
+            system_cluster_role_name = params.systemClusterRoleName
+            provider_config_name = "crossplane-local"
+            deletion_policy = "Delete"
+            management_policies = ["Observe", "Create", "Update"]
+            namespace_names = ["tm-system", "tm-core", "tm-monitoring", "tm-webhook"]
+
+            namespace_objects = [
+              {
+                apiVersion = "kubernetes.crossplane.io/v1alpha2"
+                kind = "Object"
+                metadata = {
+                  name = xr_name + "-" + ns + "-namespace"
+                  annotations = {
+                    "krm.kcl.dev/composition-resource-name" = ns + "-namespace"
+                  }
+                  labels = {
+                    "app.kubernetes.io/component" = ns
+                    "app.kubernetes.io/part-of" = "tm-platform"
+                    "platform.k8s.goodnotes.io/managed-by" = "crossplane"
+                    "platform.k8s.goodnotes.io/resource-role" = "namespace"
+                    "platform.k8s.goodnotes.io/environment" = environment
+                  }
+                }
+                spec = {
+                  deletionPolicy = deletion_policy
+                  managementPolicies = management_policies
+                  providerConfigRef = {
+                    name = provider_config_name
+                  }
+                  forProvider = {
+                    manifest = {
+                      apiVersion = "v1"
+                      kind = "Namespace"
+                      metadata = {
+                        name = ns
+                        labels = {
+                          "app.kubernetes.io/component" = ns
+                          "app.kubernetes.io/part-of" = "tm-platform"
+                          "platform.k8s.goodnotes.io/environment" = environment
+                          "platform.k8s.goodnotes.io/managed-by" = "crossplane"
+                          "platform.k8s.goodnotes.io/platform" = "tm"
+                          "platform.k8s.goodnotes.io/resource-role" = "namespace"
+                        }
+                      }
+                    }
+                  }
+                }
+              } for ns in namespace_names
+            ]
+
+            service_account_objects = [
+              {
+                apiVersion = "kubernetes.crossplane.io/v1alpha2"
+                kind = "Object"
+                metadata = {
+                  name = xr_name + "-" + ns + "-service-account"
+                  annotations = {
+                    "krm.kcl.dev/composition-resource-name" = ns + "-service-account"
+                  }
+                  labels = {
+                    "app.kubernetes.io/component" = ns
+                    "app.kubernetes.io/part-of" = "tm-platform"
+                    "platform.k8s.goodnotes.io/managed-by" = "crossplane"
+                    "platform.k8s.goodnotes.io/resource-role" = "service-account"
+                    "platform.k8s.goodnotes.io/environment" = environment
+                  }
+                }
+                spec = {
+                  deletionPolicy = deletion_policy
+                  managementPolicies = management_policies
+                  providerConfigRef = {
+                    name = provider_config_name
+                  }
+                  forProvider = {
+                    manifest = {
+                      apiVersion = "v1"
+                      kind = "ServiceAccount"
+                      metadata = {
+                        name = ns
+                        namespace = ns
+                        labels = {
+                          "app.kubernetes.io/component" = ns
+                          "app.kubernetes.io/part-of" = "tm-platform"
+                          "platform.k8s.goodnotes.io/environment" = environment
+                          "platform.k8s.goodnotes.io/managed-by" = "crossplane"
+                          "platform.k8s.goodnotes.io/platform" = "tm"
+                          "platform.k8s.goodnotes.io/resource-role" = "service-account"
+                        }
+                      }
+                    }
+                  }
+                }
+              } for ns in namespace_names
+            ]
+
+            cluster_role_binding_object = {
+              apiVersion = "kubernetes.crossplane.io/v1alpha2"
+              kind = "Object"
+              metadata = {
+                name = xr_name + "-tm-system-cluster-role-binding"
+                annotations = {
+                  "krm.kcl.dev/composition-resource-name" = "tm-system-cluster-role-binding"
+                }
+                labels = {
+                  "app.kubernetes.io/component" = "tm-system"
+                  "app.kubernetes.io/part-of" = "tm-platform"
+                  "platform.k8s.goodnotes.io/managed-by" = "crossplane"
+                  "platform.k8s.goodnotes.io/resource-role" = "cluster-role-binding"
+                  "platform.k8s.goodnotes.io/environment" = environment
+                }
+              }
+              spec = {
+                deletionPolicy = deletion_policy
+                managementPolicies = management_policies
+                providerConfigRef = {
+                  name = provider_config_name
+                }
+                forProvider = {
+                  manifest = {
+                    apiVersion = "rbac.authorization.k8s.io/v1"
+                    kind = "ClusterRoleBinding"
+                    metadata = {
+                      name = xr_name + "-tm-system-binding"
+                      labels = {
+                        "app.kubernetes.io/component" = "tm-system"
+                        "app.kubernetes.io/part-of" = "tm-platform"
+                        "platform.k8s.goodnotes.io/environment" = environment
+                        "platform.k8s.goodnotes.io/managed-by" = "crossplane"
+                        "platform.k8s.goodnotes.io/platform" = "tm"
+                        "platform.k8s.goodnotes.io/resource-role" = "cluster-role-binding"
+                      }
+                    }
+                    roleRef = {
+                      apiGroup = "rbac.authorization.k8s.io"
+                      kind = "ClusterRole"
+                      name = system_cluster_role_name
+                    }
+                    subjects = [
+                      {
+                        kind = "ServiceAccount"
+                        name = "tm-system"
+                        namespace = "tm-system"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+
+            items = namespace_objects + service_account_objects + [cluster_role_binding_object]
+    - step: automatically-detect-ready-composed-resources
+      functionRef:
+        name: function-auto-ready
