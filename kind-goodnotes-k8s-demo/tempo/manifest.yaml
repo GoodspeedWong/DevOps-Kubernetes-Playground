@@ -186,11 +186,11 @@ data:
           max_workers: 200
           queue_depth: 8000
         s3:
-          access_key: x
+          access_key: minio
           bucket: tempo-traces
           endpoint: loki-minio-tenant-hl.monitoring.svc.cluster.local:9000
           insecure: true
-          secret_key: x
+          secret_key: minio123
         search:
           prefetch_trace_count: 1000
         wal:

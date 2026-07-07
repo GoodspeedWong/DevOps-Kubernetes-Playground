@@ -1,0 +1,3 @@
+resources:
+  - standard-install.yaml
+  - runtime.yaml

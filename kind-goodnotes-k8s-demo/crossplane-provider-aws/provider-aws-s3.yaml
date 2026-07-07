@@ -4,3 +4,4 @@ metadata:
   name: crossplane-contrib-provider-aws-s3
 spec:
   package: xpkg.upbound.io/upbound/provider-aws-s3:v2.5.3
+  revisionActivationPolicy: Manual
