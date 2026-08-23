@@ -11,6 +11,7 @@ This stack follows the Crossplane v2 provider model:
 - `provider-aws-s3` installs S3 bucket and bucket-adjacent APIs.
 - Crossplane automatically installs `provider-family-aws` as a dependency for shared AWS authentication.
 - `provider-config/` creates `ClusterProviderConfig/default`, which points AWS managed resources at a secret named `aws-secret` in `crossplane-system`.
+- All AWS provider packages in this repo use `revisionActivationPolicy: Manual` so a fresh cluster does not immediately start every AWS runtime.
 
 ## 1. Prerequisites
 
@@ -43,7 +44,23 @@ kubectl -n crossplane-system create secret generic aws-secret \
 kubectl apply -k kind-goodnotes-k8s-demo/crossplane-provider-aws
 ```
 
-## 4. Wait until the provider is healthy
+## 4. Activate only the providers you need
+
+After `kubectl apply -k kind-goodnotes-k8s-demo/crossplane-provider-aws`, the `Provider`
+objects are installed but their revisions stay inactive until explicitly activated.
+
+Activate a provider by patching its `ProviderRevision`:
+
+```sh
+kubectl patch providerrevision.pkg.crossplane.io/crossplane-contrib-provider-aws-s3-REPLACE_ME \
+  --type=merge \
+  -p '{"spec":{"desiredState":"Active"}}'
+```
+
+For migration work, keep unused AWS providers inactive. This avoids loading large
+managed resource definition sets and package runtimes before they are required.
+
+## 5. Wait until the activated provider is healthy
 
 ```sh
 kubectl get providers
@@ -79,14 +96,14 @@ Expected outcome after the wait:
 - `crossplane-contrib-provider-aws-s3`, `-ec2`, `-iam`, `-rds`, and `-eks` become `HEALTHY=True`
 - `crossplane-contrib-provider-family-aws` appears automatically as a dependency
 
-## 5. Apply the cluster-wide AWS provider config
+## 6. Apply the cluster-wide AWS provider config
 
 ```sh
 kubectl apply -k kind-goodnotes-k8s-demo/crossplane-provider-aws/provider-config
 kubectl get clusterproviderconfig.aws.m.upbound.io default
 ```
 
-## 6. Create a demo AWS resource
+## 7. Create a demo AWS resource
 
 An example S3 bucket managed resource is provided under `examples/s3-bucket/`:
 
@@ -111,4 +128,5 @@ kubectl delete -k kind-goodnotes-k8s-demo/crossplane-provider-aws/examples/s3-bu
 - Crossplane v2 packages AWS support by service. This repo now pre-installs the common base set for platform work: `ec2`, `eks`, `iam`, `rds`, and `s3`.
 - The Upbound provider packages in this repo use the official `xpkg.upbound.io/upbound/...` registry path.
 - The package versions are pinned per service provider. At the time this was updated, the current marketplace versions used here were `v2.5.3` for `ec2`, `eks`, `iam`, `rds`, and `s3`.
+- To return a provider to an inactive state after a migration or test, patch the active `ProviderRevision` back to `Inactive` and verify its runtime deployment disappears from `crossplane-system`.
 - Do not uninstall the provider before deleting managed resources, or AWS resources may be left behind.

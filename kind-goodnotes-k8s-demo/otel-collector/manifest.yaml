@@ -4,10 +4,18 @@ metadata:
   name: otel-k8sattributes
 rules:
   - apiGroups: [""]
-    resources: ["pods", "namespaces", "nodes"]
-    verbs: ["get", list, watch]
+    resources:
+      - pods
+      - namespaces
+      - nodes
+      - services
+      - endpoints
+    verbs: ["get", "list", "watch"]
+
   - apiGroups: ["apps"]
-    resources: ["replicasets"]
+    resources:
+      - replicasets
+      - deployments
     verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -72,7 +80,7 @@ data:
         limit_percentage: 80
       batch:
         timeout: 5s
-        send_batch_size: 8192
+        send_batch_size: 2048
       attributes:
         actions:
           - key: k8s.cluster.name
@@ -80,6 +88,9 @@ data:
             action: upsert
           - key: deployment.environment
             value: prod
+            action: upsert
+          - key: service.name
+            from_attribute: k8s.deployment.name
             action: upsert
     exporters:
       otlp:
@@ -143,8 +154,8 @@ spec:
           - containerPort: 8889 # Prometheus metrics
             name: metrics
         resources:
-          limits: { cpu: "1000m", memory: "1Gi" }
-          requests: { cpu: "200m", memory: "256Mi" }
+          limits: { cpu: "500m", memory: "512Mi" }
+          requests: { cpu: "100m", memory: "128Mi" }
         volumeMounts:
           - name: config
             mountPath: /etc/otel
@@ -204,7 +215,7 @@ data:
             - k8s.replicaset.name
       batch:
         timeout: 5s
-        send_batch_size: 8192
+        send_batch_size: 2048
       resource/loki_hints:
         attributes:
           - action: upsert
@@ -219,15 +230,13 @@ data:
       prometheusremotewrite:
         endpoint: http://mimir-distributor.monitoring.svc:8080/api/v1/push
         headers:
-          X-Scope-OrgID: "self-monitoring"
+          X-Scope-OrgID: self-monitoring
+        resource_to_telemetry_conversion:
+          enabled: true
       loki:
         endpoint: http://loki-gateway.monitoring.svc.cluster.local/loki/api/v1/push
         headers:
           X-Scope-OrgID: "self-monitoring"
-      # 用于接收来自 Agent 的 metrics/logs 时先就地观测，之后可替换为 Mimir/Loki 等后端
-      logging:
-        verbosity: normal
-
     extensions:
       health_check:
         endpoint: 0.0.0.0:13133
@@ -242,7 +251,7 @@ data:
         metrics:
           receivers: [otlp]
           processors: [memory_limiter, batch]
-          exporters: [prometheusremotewrite, logging]
+          exporters: [prometheusremotewrite]
         logs:
           receivers: [otlp]
           processors: [memory_limiter, k8sattributes, resource/loki_hints, batch]
@@ -290,23 +299,11 @@ spec:
             port: 13133
           initialDelaySeconds: 5
         resources:
-          limits: { cpu: "1000m", memory: "1Gi" }
-          requests: { cpu: "200m", memory: "256Mi" }
+          limits: { cpu: "500m", memory: "512Mi" }
+          requests: { cpu: "100m", memory: "128Mi" }
         volumeMounts:
           - name: config
             mountPath: /etc/otel
-      - name: debug
-        image: nicolaka/netshoot
-        command: ["sh", "-c", "sleep 100000000"]
-        stdin: true
-        tty: true
-        resources:
-          requests:
-            cpu: "10m"
-            memory: "32Mi"
-          limits:
-            cpu: "100m"
-            memory: "64Mi"
       volumes:
         - name: config
           configMap:
@@ -334,7 +331,7 @@ metadata:
   name: otel-gateway-pdb
   namespace: monitoring
 spec:
-  minAvailable: 2
+  minAvailable: 1
   selector:
     matchLabels:
       app: otel-gateway

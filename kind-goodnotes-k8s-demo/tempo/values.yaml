@@ -7,8 +7,8 @@ storage:
     s3:
       bucket: "tempo-traces"
       endpoint: "loki-minio-tenant-hl.monitoring.svc.cluster.local:9000"
-      access_key: "x"
-      secret_key: "x"
+      access_key: "minio"
+      secret_key: "minio123"
       insecure: true
     # tuning pool for ingestion
     pool:

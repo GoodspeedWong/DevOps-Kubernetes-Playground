@@ -4,3 +4,4 @@ metadata:
   name: crossplane-contrib-provider-aws-eks
 spec:
   package: xpkg.upbound.io/upbound/provider-aws-eks:v2.5.3
+  revisionActivationPolicy: Manual

@@ -1,0 +1,236 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: openclaw-api-metrics
+  namespace: apps
+spec:
+  namespaceSelector:
+    matchNames:
+      - apps
+  selector:
+    matchLabels:
+      openclaw-observability: api
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: openclaw-worker-metrics
+  namespace: apps
+spec:
+  namespaceSelector:
+    matchNames:
+      - apps
+  selector:
+    matchLabels:
+      openclaw-observability: worker
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: openclaw-postgres-metrics
+  namespace: apps
+spec:
+  namespaceSelector:
+    matchNames:
+      - apps
+  selector:
+    matchLabels:
+      openclaw-observability: postgres
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: openclaw-trading-alerts
+  namespace: monitoring
+spec:
+  groups:
+    - name: openclaw-trading.rules
+      rules:
+        - alert: OpenClawTradingCoreTargetDown
+          expr: up{namespace="apps", service="trading-core"} == 0
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: trading-core target is down
+            description: Prometheus cannot scrape the trading-core metrics endpoint in the apps namespace.
+        - alert: OpenClawMarketDataAdapterStale
+          expr: time() - max(market_data_last_success_unixtime{job="market-data-adapter",namespace="apps",service="market-data-adapter"}) > 5400
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: market-data-adapter has stopped refreshing data
+            description: The most recent successful market data ingest is older than 90 minutes.
+        - alert: OpenClawPortfolioWatcherStale
+          expr: time() - max(portfolio_watch_last_success_unixtime{job="portfolio-watcher",namespace="apps",service="portfolio-watcher"}) > 600
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: portfolio-watcher has stopped refreshing alerts
+            description: The most recent successful watcher run is older than 10 minutes.
+        - alert: OpenClawNotificationGatewayStale
+          expr: time() - max(notification_last_success_unixtime{job="notification-gateway",namespace="apps",service="notification-gateway"}) > 600
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: notification-gateway has stopped flushing notifications
+            description: The most recent successful notification flush is older than 10 minutes.
+        - alert: OpenClawAgentCoordinatorStale
+          expr: time() - max(agent_pipeline_last_success_unixtime{job="agent-coordinator",namespace="apps",service="agent-coordinator"}) > 3600
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: agent-coordinator has stopped running
+            description: The most recent successful agent pipeline run is older than 60 minutes.
+        - alert: OpenClawExecutionAgentStale
+          expr: time() - max(paper_execution_last_success_unixtime{job="execution-agent",namespace="apps",service="execution-agent"}) > 900
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: execution-agent has stopped processing paper intents
+            description: The most recent successful paper execution cycle is older than 15 minutes.
+        - alert: OpenClawNotificationBacklog
+          expr: max(trading_core_notifications{job="trading-core",namespace="apps",service="trading-core",status="pending"}) > 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: notification backlog detected
+            description: Pending notification_outbox entries are accumulating in trading-core.
+        - alert: OpenClawAkshareMorningSamplingMissing
+          expr: (sum(increase(kube_job_status_succeeded{namespace="apps",job_name=~"akshare-sampling-morning-.*"}[12h])) < 1) and on() (openclaw_trade_calendar_state{job="trading-core",namespace="apps",service="trading-core",market="cn_ashare",date_scope="today",state="open"} > 0 or (openclaw_trade_calendar_state{job="trading-core",namespace="apps",service="trading-core",market="cn_ashare",date_scope="today",state="unknown"} > 0 and day_of_week(vector(time())) >= 1 and day_of_week(vector(time())) <= 5)) and on() (hour(vector(time())) > 3 or (hour(vector(time())) == 3 and minute(vector(time())) >= 0))
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: AkShare morning sampling is missing
+            description: The `akshare-sampling-morning` CronJob has not produced a successful Job in the last 12 hours after the expected morning collection window.
+        - alert: OpenClawAkshareAfternoonSamplingMissing
+          expr: (sum(increase(kube_job_status_succeeded{namespace="apps",job_name=~"akshare-sampling-afternoon-.*"}[12h])) < 1) and on() (openclaw_trade_calendar_state{job="trading-core",namespace="apps",service="trading-core",market="cn_ashare",date_scope="today",state="open"} > 0 or (openclaw_trade_calendar_state{job="trading-core",namespace="apps",service="trading-core",market="cn_ashare",date_scope="today",state="unknown"} > 0 and day_of_week(vector(time())) >= 1 and day_of_week(vector(time())) <= 5)) and on() (hour(vector(time())) > 6 or (hour(vector(time())) == 6 and minute(vector(time())) >= 0))
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: AkShare afternoon sampling is missing
+            description: The `akshare-sampling-afternoon` CronJob has not produced a successful Job in the last 12 hours after the expected afternoon collection window.
+        - alert: OpenClawAkshareCloseSamplingMissing
+          expr: (sum(increase(kube_job_status_succeeded{namespace="apps",job_name=~"akshare-sampling-close-.*"}[12h])) < 1) and on() (openclaw_trade_calendar_state{job="trading-core",namespace="apps",service="trading-core",market="cn_ashare",date_scope="today",state="open"} > 0 or (openclaw_trade_calendar_state{job="trading-core",namespace="apps",service="trading-core",market="cn_ashare",date_scope="today",state="unknown"} > 0 and day_of_week(vector(time())) >= 1 and day_of_week(vector(time())) <= 5)) and on() (hour(vector(time())) > 7 or (hour(vector(time())) == 7 and minute(vector(time())) >= 20))
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: AkShare close sampling is missing
+            description: The `akshare-sampling-close` CronJob has not produced a successful Job in the last 12 hours after the expected close collection window.
+        - alert: OpenClawTradingDayRecapMissing
+          expr: (sum(increase(kube_job_status_succeeded{namespace="apps",job_name=~"trading-day-recap-.*"}[12h])) < 1) and on() (openclaw_trade_calendar_state{job="trading-core",namespace="apps",service="trading-core",market="cn_ashare",date_scope="today",state="open"} > 0 or (openclaw_trade_calendar_state{job="trading-core",namespace="apps",service="trading-core",market="cn_ashare",date_scope="today",state="unknown"} > 0 and day_of_week(vector(time())) >= 1 and day_of_week(vector(time())) <= 5)) and on() (hour(vector(time())) > 7 or (hour(vector(time())) == 7 and minute(vector(time())) >= 40))
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Trading-day recap is missing
+            description: The `trading-day-recap` CronJob has not produced a successful Job in the last 12 hours after the expected recap window.
+        - alert: OpenClawAkshareProviderReadinessValidationOnly
+          expr: openclaw_provider_readiness_state{job="trading-core",namespace="apps",service="trading-core",provider="akshare",state="validation_only"} > 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: AkShare provider readiness dropped to validation_only
+            description: The latest AkShare provider readiness payload is below steady-state and has re-entered validation-only mode.
+        - alert: OpenClawAkshareProviderReadinessBlocked
+          expr: openclaw_provider_readiness_state{job="trading-core",namespace="apps",service="trading-core",provider="akshare",state="blocked"} > 0
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: AkShare provider readiness is blocked
+            description: The latest AkShare provider readiness payload is blocked and the post-P0 line should be treated as regressed.
+        - alert: OpenClawAkshareP0AcceptanceClose
+          expr: openclaw_p0_acceptance_state{job="trading-core",namespace="apps",service="trading-core",provider="akshare",state="close"} > 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: AkShare P0 acceptance is close, not ready
+            description: The latest AkShare P0 acceptance verdict dropped from ready to close and should be reviewed as a quality regression.
+        - alert: OpenClawAkshareP0AcceptanceNotReady
+          expr: openclaw_p0_acceptance_state{job="trading-core",namespace="apps",service="trading-core",provider="akshare",state="not_ready"} > 0
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: AkShare P0 acceptance is not ready
+            description: The latest AkShare P0 acceptance verdict is not_ready and the post-P0 line should be treated as regressed.
+        - alert: OpenClawPostgresExporterDown
+          expr: up{namespace="apps", service="postgres-exporter"} == 0
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: postgres-exporter target is down
+            description: Prometheus cannot scrape postgres-exporter in the apps namespace.
+        - alert: OpenClawPostgresConnectionsHigh
+          expr: max(pg_stat_database_numbackends{namespace="apps",datname="trading_openclaw"}) / clamp_min(max(pg_settings_max_connections{namespace="apps"}), 1) > 0.8
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: postgres connection usage is high
+            description: Postgres is using more than 80% of configured max connections for the trading_openclaw database.
+        - alert: OpenClawPostgresDeadlocksDetected
+          expr: increase(pg_stat_database_deadlocks{namespace="apps",datname="trading_openclaw"}[15m]) > 0
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: postgres deadlocks detected
+            description: Postgres reported at least one deadlock in the last 15 minutes for the trading_openclaw database.
+        - alert: OpenClawNodeVarFilesystemPressure
+          expr: 100 * max by (instance) (1 - node_filesystem_avail_bytes{mountpoint="/var",fstype!~"tmpfs|devtmpfs|overlay|squashfs"} / clamp_min(node_filesystem_size_bytes{mountpoint="/var",fstype!~"tmpfs|devtmpfs|overlay|squashfs"}, 1)) > 80
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: node /var filesystem pressure is high
+            description: A worker node root filesystem backing local-path storage is above 80% usage on /var and may threaten apps and monitoring workloads together.
+        - alert: OpenClawMonitoringPVCRequestDrift
+          expr: max by (persistentvolumeclaim) (kubelet_volume_stats_used_bytes{namespace="monitoring",persistentvolumeclaim=~"storage-mimir-ingester-zone-.*|storage-mimir-store-gateway-zone-.*|storage-mimir-compactor-0|storage-mimir-alertmanager-0|mimir-minio|loki-minio-tenant-.*"} / clamp_min(kube_persistentvolumeclaim_resource_requests_storage_bytes{namespace="monitoring",persistentvolumeclaim=~"storage-mimir-ingester-zone-.*|storage-mimir-store-gateway-zone-.*|storage-mimir-compactor-0|storage-mimir-alertmanager-0|mimir-minio|loki-minio-tenant-.*"}, 1)) > 4
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: monitoring PVC actual usage is far above requested size
+            description: A monitoring PVC is using more than 4x its requested storage, which is a high-risk pattern on local-path storage.
+        - alert: OpenClawMimirIngesterLocalTSDBHigh
+          expr: max by (persistentvolumeclaim) (kubelet_volume_stats_used_bytes{namespace="monitoring",persistentvolumeclaim=~"storage-mimir-ingester-zone-.*"} / 1073741824) > 8
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: Mimir ingester local TSDB usage is high
+            description: A Mimir ingester PVC is above 8 GiB actual usage and is approaching the previous self-monitoring blow-up pattern.
+        - alert: OpenClawMonitoringStorageBlastRadiusRisk
+          expr: (max(100 * (1 - node_filesystem_avail_bytes{mountpoint="/var",fstype!~"tmpfs|devtmpfs|overlay|squashfs"} / clamp_min(node_filesystem_size_bytes{mountpoint="/var",fstype!~"tmpfs|devtmpfs|overlay|squashfs"}, 1))) > 80) and on() (max(kubelet_volume_stats_used_bytes{namespace="monitoring",persistentvolumeclaim=~"storage-mimir-ingester-zone-.*"} / 1073741824) > 8) and on() (max(kube_pod_status_ready{namespace="apps",pod=~"postgres-0",condition="true"}) == 1)
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: monitoring storage pressure now threatens apps blast radius
+            description: Node root usage is high while a Mimir ingester local TSDB is large and apps/postgres is live; treat this as a repeat-risk precursor to the 2026-03-27 incident.
